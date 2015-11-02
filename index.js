@@ -3,7 +3,7 @@
 Version: 1.00
 (c) CopyCatz, 2015
 -----------------------------------------------------------------------------
-Author: CopyCatz <bla@bla.com>
+Author: CopyCatz <copycat73@outlook.com>
 Description: Netatmo weather station data
 
 ******************************************************************************/
@@ -102,11 +102,11 @@ Netatmo.prototype.startFetch = function (instance) {
     var self = instance;
     var now_seconds = new Date().getTime() / 1000;
     if (this.token_expire_time==undefined||now_seconds-this.token_expire_time>this.last_token_time) {
-        console.logJS('new token needed');
+        //console.logJS('new token needed');
         self.fetchToken(instance);
     }
     else {
-        console.logJS('token ok');
+        //console.logJS('token ok');
         self.fetchStationData(instance);
         
     }
@@ -138,7 +138,7 @@ Netatmo.prototype.fetchToken = function (instance) {
                 self.access_token = response.data.access_token;
                 self.refresh_token = response.data.refresh_token;
                 self.token_expire_time = response.data.expires_in;
-                console.logJS('new token '+this.access_token);
+                //console.logJS('new token '+this.access_token);
                 self.fetchStationData(instance);
             },
             error: function(response) {
@@ -191,7 +191,7 @@ Netatmo.prototype.fetchToken = function (instance) {
 Netatmo.prototype.fetchStationData = function (instance) {
     
     var self = instance;
-    console.logJS('fetch using token '+self.access_token);
+    //console.logJS('fetch using token '+self.access_token);
 
     var url = "https://api.netatmo.com/api/getstationsdata?access_token="+this.access_token;
     
