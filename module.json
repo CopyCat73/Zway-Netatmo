@@ -1,0 +1,76 @@
+{
+   "author" : "CopyCatz",
+   "category" : "environment",
+   "defaults" : {
+      "client_id" : "",
+      "client_secret" : "",
+      "username" : "",
+      "password" : "",
+      "description" : "__description__",
+      "interval" : 5,
+      "title" : "__title__"
+   },
+   "dependencies" : [],
+   "homepage" : "http://google.com",
+   "icon" : "icon.png",
+   "maturity" : "stable",
+   "moduleName" : "Netatmo",
+   "options" : {
+      "fields" : {
+         "client_id" : {
+            "label" : "__client_id__",
+            "order": 1
+         },
+         "client_secret" : {
+            "label" : "__client_secret__",
+            "order": 2
+         },
+         "username" : {
+            "label" : "__username__",
+            "order": 3
+         },
+         "password" : {
+            "label" : "__password__",
+            "order": 4
+         },
+         "interval" : {
+            "helper" : "__interval_helper__",
+            "label" : "__interval_label__",
+            "order": 5
+         }
+      }
+   },
+   "repository" : {
+      "source" : "https://github.com/tbd",
+      "type" : "git"
+   },
+   "schema" : {
+      "properties" : {
+         "client_id" : {
+            "required" : true,
+            "type" : "string"
+         },
+         "client_secret" : {
+            "required" : true,
+            "type" : "string"
+         },
+         "username" : {
+            "required" : true,
+            "type" : "string"
+         },
+         "password" : {
+            "required" : true,
+            "type" : "string"
+         },
+
+         "interval" : {
+            "required" : true,
+            "type" : "number"
+         }
+      },
+      "required" : true,
+      "type" : "object"
+   },
+   "singleton" : true,
+   "version" : "1.00"
+}

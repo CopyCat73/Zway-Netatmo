@@ -1,0 +1,21 @@
+{
+  "title": "Netatmo",
+  "description": "Retrieves data from your netatmo station. Creates virtual devices for temperature, humidity, rain, co2, pressure and noise level.",
+  "client_id": "Client ID",
+  "client_secret": "Client secret",
+  "username": "Username",
+  "password": "Password",
+  "temperature": "Temperature",
+  "humidity": "Humidity",
+  "co2": "CO2",
+  "pressure": "Pressure",
+  "noise": "Noise",  
+  "interval_label": "Refresh interval",
+  "interval_helper": "Specifies data refresh interval in minutes",
+  "err_fetch_data": "Error fetching Netatmo data",
+  "err_fetch_token": "Error fetching Netatmo token",
+  "err_fetch_refreshtoken": "Error fetching Netatmo refresh token",
+  "current": "current",
+  "last1": "last hour",
+  "last24": "last 24 hours"
+}
