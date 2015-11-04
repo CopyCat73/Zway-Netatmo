@@ -21,7 +21,6 @@ function Netatmo (id, controller) {
     this.access_token       = undefined;
     this.refresh_token      = undefined;
     this.token_expire_time  = undefined;
-    this.last_token_time    = undefined;
     this.timer              = undefined;
     this.numberOfDevices    = undefined;
     this.temperatureUnit    = undefined;
@@ -101,7 +100,7 @@ Netatmo.prototype.startFetch = function (instance) {
 
     var self = instance;
     var now_seconds = new Date().getTime() / 1000;
-    if (this.token_expire_time==undefined||now_seconds-this.token_expire_time>this.last_token_time) {
+    if (self.token_expire_time==undefined||now_seconds>=self.token_expire_time) {
         //console.logJS('new token needed');
         self.fetchToken(instance);
     }
@@ -116,6 +115,7 @@ Netatmo.prototype.startFetch = function (instance) {
 Netatmo.prototype.fetchToken = function (instance) {
     
     var self = instance;
+    var now_seconds = new Date().getTime() / 1000;
     
     if (self.refresh_token == undefined) {
     
@@ -137,7 +137,7 @@ Netatmo.prototype.fetchToken = function (instance) {
             success: function(response) {
                 self.access_token = response.data.access_token;
                 self.refresh_token = response.data.refresh_token;
-                self.token_expire_time = response.data.expires_in;
+                self.token_expire_time = now_seconds + response.data.expires_in;
                 //console.logJS('new token '+this.access_token);
                 self.fetchStationData(instance);
             },
@@ -208,6 +208,9 @@ Netatmo.prototype.fetchStationData = function (instance) {
                 "module", 
                 "Netatmo"
             );
+            if (response.data.error.code==3) {
+                self.fetchToken(instance);
+            }
         }
     });
 };
