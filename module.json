@@ -41,7 +41,7 @@
       }
    },
    "repository" : {
-      "source" : "https://github.com/tbd",
+      "source" : "https://github.com/CopyCat73/Zway-Netatmo",
       "type" : "git"
    },
    "schema" : {

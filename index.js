@@ -54,10 +54,8 @@ Netatmo.prototype.init = function (config) {
         self.startFetch(self);
     }, intervalTime);
     
-    //console.log('[Netatmo] Last update time '+updateTime);
-    //if ((updateTime + intervalTime / 3) < currentTime) {
     self.startFetch(self);
-    //}
+   
 };
 
 Netatmo.prototype.stop = function () {
@@ -171,7 +169,7 @@ Netatmo.prototype.fetchToken = function (instance) {
             success: function(response) {
                 self.access_token = response.data.access_token;
                 self.refresh_token = response.data.refresh_token;
-                self.token_expire_time = response.data.expires_in;
+                self.token_expire_time = now_seconds + response.data.expires_in;
                 self.fetchStationData(instance);
             },
             error: function(response) {
