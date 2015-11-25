@@ -62,7 +62,6 @@
             "required" : true,
             "type" : "string"
          },
-
          "interval" : {
             "required" : true,
             "type" : "number"
