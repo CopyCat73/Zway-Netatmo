@@ -25,6 +25,7 @@ function Netatmo (id, controller) {
     this.numberOfDevices    = undefined;
     this.temperatureUnit    = undefined;
     this.devices            = {};
+    this.deviceIndex        = {};
 }
 
 inherits(Netatmo, AutomationModule);
@@ -49,7 +50,7 @@ Netatmo.prototype.init = function (config) {
     var intervalTime    = parseInt(self.config.interval) * 60 * 1000;
     
     self.datatimer = setInterval(function() {
-        self.fetchStationData(self);
+        self.fetchStationData();
     }, intervalTime);
     
     self.fetchToken();
@@ -71,7 +72,6 @@ Netatmo.prototype.stop = function () {
     
     self.removeDevices();
     
-    self.numberOfDevices = undefined;
     Netatmo.super_.prototype.stop.call(this);
 };
 
@@ -128,13 +128,13 @@ Netatmo.prototype.fetchToken = function () {
         success: function(response) {
             self.access_token = response.data.access_token;
             self.refresh_token = response.data.refresh_token;
-            if(typeof self.tokentimer !== "undefined"){
+            if(self.tokentimer){
                 clearTimeout(self.tokentimer);
             }
             self.tokentimer = setInterval(function() {
                 self.fetchRefreshToken();
             }, (response.data.expires_in-100) * 1000);
-            self.fetchStationData(self);
+            self.fetchStationData();
         },
         error: function(response) {
             console.error("[Netatmo] Initial token fetch error");
@@ -194,9 +194,9 @@ Netatmo.prototype.fetchRefreshToken = function () {
 };       
 
     
-Netatmo.prototype.fetchStationData = function (instance) {
+Netatmo.prototype.fetchStationData = function () {
     
-    var self = instance;
+    var self = this;
     //console.logJS('fetch using token '+self.access_token);
 
     var url = "https://api.netatmo.com/api/getstationsdata?access_token="+this.access_token;
@@ -204,7 +204,7 @@ Netatmo.prototype.fetchStationData = function (instance) {
     http.request({
         url: url,
         async: true,
-        success: function(response) { self.processResponse(instance,response) },
+        success: function(response) { self.processResponse(response) },
         error: function(response) {
             console.error("[Netatmo] Station data fetch error");
             console.logJS(response);
@@ -215,141 +215,51 @@ Netatmo.prototype.fetchStationData = function (instance) {
                 "Netatmo"
             );
             if (response.data.error.code==3) {
-                self.fetchToken(instance);
+                self.fetchToken();
             }
         }
     });
 };
 
-Netatmo.prototype.processResponse = function(instance,response) {
+Netatmo.prototype.processResponse = function(response) {
     
-    console.log("[Netatmo] Update");
-    var self = instance;
+    
+    var self = this;
     
     var incomingNumberOfDevices = response.data.body.devices.length;
       
     if (self.numberOfDevices == undefined||self.numberOfDevices!=incomingNumberOfDevices) {
-        // new or changed setting
-        self.removeDevices();
-        self.numberOfDevices = incomingNumberOfDevices;
-        switch (response.data.body.user.administrative.unit) {
-        case 0:
-            this.temperatureUnit='°C';
-            break;
-        case 1:
-            this.temperatureUnit = '°F';
-            break;
-        }
-        for (dc = 0; dc < self.numberOfDevices; dc++) {
-            var deviceName = response.data.body.devices[dc].module_name;
-            var deviceID = response.data.body.devices[dc]._id;
-            
-            self.addDevice('temperature_'+deviceID,{
-                metrics : {
-                    probeTitle: self.langFile.temperature,
-                    icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/temperature.png',
-                    scaleTitle: this.temperatureUnit,
-                    title: deviceName + ' ' + self.langFile.temperature
-                }
-            });
-    
-            self.addDevice('humidity_'+deviceID,{
-                metrics : {
-                    probeTitle: self.langFile.humidity,
-                    icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/humidity.png',
-                    scaleTitle: '%',
-                    title: deviceName + ' ' + self.langFile.humidity
-                }
-            });
-
-            self.addDevice('co2_'+deviceID,{
-                metrics : {
-                    probeTitle: self.langFile.co2,
-                    icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/co2.png',
-                    scaleTitle: 'ppm',
-                    title: deviceName + ' ' + self.langFile.co2
-                }
-            });
-
-            self.addDevice('pressure_'+deviceID,{
-                metrics : {
-                    probeTitle: self.langFile.pressure,
-                    icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/pressure.png',
-                    scaleTitle: 'mbar',
-                    title: deviceName + ' ' + self.langFile.pressure
-                }
-            });
- 
-            self.addDevice('noise_'+deviceID,{
-                metrics : {
-                    probeTitle: self.langFile.noise,
-                    icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/noise.png',
-                    scaleTitle: 'db',
-                    title: deviceName + ' ' + self.langFile.noise
-                }
-            });
-            
-            var numberOfModules = response.data.body.devices[dc].modules.length;
-            
-            for (mc = 0; mc < numberOfModules; mc++) {
-                var moduleName = response.data.body.devices[dc].modules[mc].module_name;
-                var moduleID = response.data.body.devices[dc].modules[mc]._id;
-                var numberOfModuleVariables = response.data.body.devices[dc].modules[mc].data_type.length;
-                for (mvc = 0; mvc < numberOfModuleVariables; mvc++) {
-                    var variable=response.data.body.devices[dc].modules[mc].data_type[mvc];
-                    var unit = self.getUnit(instance,variable);
-                    if (variable == 'Rain') {
-                        self.addDevice(variable + '_' + deviceID + '_' + moduleID,{
-                            metrics : {
-                                probeTitle: variable,
-                                scaleTitle: unit,
-                                title: moduleName + ' ' + variable + ' ('+self.langFile.current+')'
-                            }
-                        });
-                        self.addDevice(variable + '1_' + deviceID + '_' + moduleID,{
-                            metrics : {
-                                probeTitle: variable,
-                                scaleTitle: unit,
-                                title: moduleName + ' ' + variable + ' ('+self.langFile.last1+')'
-                            }
-                        });
-                        self.addDevice(variable + '24_' + deviceID + '_' + moduleID,{
-                            metrics : {
-                                probeTitle: variable,
-                                scaleTitle: unit,
-                                title: moduleName + ' ' + variable + ' ('+self.langFile.last24+')'
-                            }
-                        });
-                    }
-                    else {
-                        self.addDevice(variable + '_' + deviceID + '_' + moduleID,{
-                            metrics : {
-                                probeTitle: variable,
-                                scaleTitle: unit,
-                                title: moduleName + ' ' + variable
-                            }
-                        });
-                    }
-                }
-            }       
-        }
+        self.initializeDevices(response);
     }
+    
+    console.log("[Netatmo] Update");
+    var currentDate = new Date();
     
     for (dc = 0; dc < self.numberOfDevices; dc++) {
         
         // base stations
         var deviceID = response.data.body.devices[dc]._id;
-        var temperature = response.data.body.devices[dc].dashboard_data.Temperature; // indoor temperature
-        var humidity = response.data.body.devices[dc].dashboard_data.Humidity; // indoor temperature
-        var co2 = response.data.body.devices[dc].dashboard_data.CO2; // indoor temperature
-        var noise = response.data.body.devices[dc].dashboard_data.Noise; // indoor temperature
-        var pressure = response.data.body.devices[dc].dashboard_data.Pressure; // indoor temperature
+        var temperature = response.data.body.devices[dc].dashboard_data.Temperature; 
+        var humidity = response.data.body.devices[dc].dashboard_data.Humidity;
+        var co2 = response.data.body.devices[dc].dashboard_data.CO2; 
+        var noise = response.data.body.devices[dc].dashboard_data.Noise; 
+        var pressure = response.data.body.devices[dc].dashboard_data.Pressure; 
 
-        self.devices['temperature_' + deviceID].set('metrics:level',temperature);
-        self.devices['humidity_' + deviceID].set('metrics:level', humidity);
-        self.devices['co2_' + deviceID].set('metrics:level', co2);
-        self.devices['noise_' + deviceID].set('metrics:level', noise);
-        self.devices['pressure_' + deviceID].set('metrics:level', pressure);
+        if(typeof self.devices['temperature_' + dc] !== "undefined"){
+            self.devices['temperature_' + dc].set('metrics:level',temperature);
+            self.devices['temperature_' + dc].set('metrics:timestamp',currentDate.getTime());
+            self.devices['humidity_' + dc].set('metrics:level', humidity);
+            self.devices['humidity_' + dc].set('metrics:timestamp',currentDate.getTime());
+            self.devices['co2_' + dc].set('metrics:level', co2);
+            self.devices['co2_' + dc].set('metrics:timestamp',currentDate.getTime());
+            self.devices['noise_' + dc].set('metrics:level', noise);
+            self.devices['noise_' + dc].set('metrics:timestamp',currentDate.getTime());
+            self.devices['pressure_' + dc].set('metrics:level', pressure);
+            self.devices['pressure_' + dc].set('metrics:timestamp',currentDate.getTime());
+        }
+        else {
+            console.log("[Netatmo] Update device mismatch");
+        }
         
         // modules
         var numberOfModules = response.data.body.devices[dc].modules.length;
@@ -366,24 +276,30 @@ Netatmo.prototype.processResponse = function(instance,response) {
                     var icon = '/ZAutomation/api/v1/load/modulemedia/Netatmo/rain.png';
 
                     var value = response.data.body.devices[dc].modules[mc].dashboard_data[variable];
-                    self.devices[variable + '_' + deviceID + '_' + moduleID].set('metrics:level', value);
-                    self.devices[variable + '_' + deviceID + '_' + moduleID].set('metrics:icon', icon);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:level', value);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:icon', icon);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:timestamp',currentDate.getTime());
  
                     value = response.data.body.devices[dc].modules[mc].dashboard_data['sum_rain_1'];
-                    self.devices[variable + '1_' + deviceID + '_' + moduleID].set('metrics:level', value);
-                    self.devices[variable + '1_' + deviceID + '_' + moduleID].set('metrics:icon', icon);
+                    self.devices[variable + '1_' + dc + '_' + mc].set('metrics:level', value);
+                    self.devices[variable + '1_' + dc + '_' + mc].set('metrics:icon', icon);
+                    self.devices[variable + '1_' + dc + '_' + mc].set('metrics:timestamp',currentDate.getTime());
  
                     value = response.data.body.devices[dc].modules[mc].dashboard_data['sum_rain_24'];
-                    self.devices[variable + '24_' + deviceID + '_' + moduleID].set('metrics:level', value);
-                    self.devices[variable + '24_' + deviceID + '_' + moduleID].set('metrics:icon', icon);
+                    self.devices[variable + '24_' + dc + '_' + mc].set('metrics:level', value);
+                    self.devices[variable + '24_' + dc + '_' + mc].set('metrics:icon', icon);
+                    self.devices[variable + '24_' + dc + '_' + mc].set('metrics:timestamp',currentDate.getTime());
+ 
                 
                 }
                 else {
                     
                     var value = response.data.body.devices[dc].modules[mc].dashboard_data[variable];
-                    self.devices[variable + '_' + deviceID + '_' + moduleID].set('metrics:level', value);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:level', value);
                     var icon = '/ZAutomation/api/v1/load/modulemedia/Netatmo/'+variable.toLowerCase()+'.png';
-                    self.devices[variable + '_' + deviceID + '_' + moduleID].set('metrics:icon', icon);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:icon', icon);
+                    self.devices[variable + '_' + dc + '_' + mc].set('metrics:timestamp',currentDate.getTime());
+ 
                 
                 }
             }
@@ -391,9 +307,122 @@ Netatmo.prototype.processResponse = function(instance,response) {
     }
 };
 
-Netatmo.prototype.getUnit = function(instance,string) {
+Netatmo.prototype.initializeDevices = function(response) {
     
-    var self = instance;
+    console.log("[Netatmo] Init devices");
+
+    var self = this;
+ 
+    self.numberOfDevices = response.data.body.devices.length;
+    
+    switch (response.data.body.user.administrative.unit) {
+    case 0:
+        this.temperatureUnit='°C';
+        break;
+    case 1:
+        this.temperatureUnit = '°F';
+        break;
+    }
+    
+    for (dc = 0; dc < self.numberOfDevices; dc++) {
+        var deviceName = response.data.body.devices[dc].module_name;
+        var deviceID = response.data.body.devices[dc]._id;
+       
+        self.addDevice('temperature_'+dc,{
+            metrics : {
+                probeTitle: self.langFile.temperature,
+                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/temperature.png',
+                scaleTitle: this.temperatureUnit,
+                title: deviceName + ' ' + self.langFile.temperature
+            }
+        });
+
+        self.addDevice('humidity_'+dc,{
+            metrics : {
+                probeTitle: self.langFile.humidity,
+                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/humidity.png',
+                scaleTitle: '%',
+                title: deviceName + ' ' + self.langFile.humidity
+            }
+        });
+
+        self.addDevice('co2_'+dc,{
+            metrics : {
+                probeTitle: self.langFile.co2,
+                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/co2.png',
+                scaleTitle: 'ppm',
+                title: deviceName + ' ' + self.langFile.co2
+            }
+        });
+
+        self.addDevice('pressure_'+dc,{
+            metrics : {
+                probeTitle: self.langFile.pressure,
+                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/pressure.png',
+                scaleTitle: 'mbar',
+                title: deviceName + ' ' + self.langFile.pressure
+            }
+        });
+
+        self.addDevice('noise_'+dc,{
+            metrics : {
+                probeTitle: self.langFile.noise,
+                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/noise.png',
+                scaleTitle: 'db',
+                title: deviceName + ' ' + self.langFile.noise
+            }
+        });
+           
+        var numberOfModules = response.data.body.devices[dc].modules.length;
+        
+        for (mc = 0; mc < numberOfModules; mc++) {
+            var moduleName = response.data.body.devices[dc].modules[mc].module_name;
+            var moduleID = response.data.body.devices[dc].modules[mc]._id;
+            var numberOfModuleVariables = response.data.body.devices[dc].modules[mc].data_type.length;
+            for (mvc = 0; mvc < numberOfModuleVariables; mvc++) {
+                var variable=response.data.body.devices[dc].modules[mc].data_type[mvc];
+                var unit = self.getUnit(variable);
+                if (variable == 'Rain') {
+                    self.addDevice(variable + '_' + dc + '_' + mc,{
+                        metrics : {
+                            probeTitle: variable,
+                            scaleTitle: unit,
+                            title: moduleName + ' ' + variable + ' ('+self.langFile.current+')'
+                        }
+                    });
+                    self.addDevice(variable + '1_' + dc + '_' + mc,{
+                        metrics : {
+                            probeTitle: variable,
+                            scaleTitle: unit,
+                            title: moduleName + ' ' + variable + ' ('+self.langFile.last1+')'
+                        }
+                    });
+                    self.addDevice(variable + '24_' + dc + '_' + mc,{
+                        metrics : {
+                            probeTitle: variable,
+                            scaleTitle: unit,
+                            title: moduleName + ' ' + variable + ' ('+self.langFile.last24+')'
+                        }
+                    });
+                }
+                else {
+                    self.addDevice(variable + '_' + dc + '_' + mc,{
+                        metrics : {
+                            probeTitle: variable,
+                            scaleTitle: unit,
+                            title: moduleName + ' ' + variable
+                        }
+                    });
+                }
+            }
+        }       
+    }
+};
+
+
+Netatmo.prototype.getUnit = function(string) {
+    
+    var self = this;
     string = string.toLowerCase();
     
     switch (string) {

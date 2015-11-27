@@ -28,9 +28,9 @@ Currently supported devices are:
 *   Additional indoor module (Temperature, humidity and CO2)
 *   Rain gauge (Rain, Rain last hour and rain last 24 hours)
 
-# Events
+Please remove and install this module whenever you add or remove netatmo devices in your home. 
 
-No events are emitted (yet)
+
 
 # License
 
