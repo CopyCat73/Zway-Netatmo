@@ -80,18 +80,37 @@ Netatmo.prototype.stop = function () {
 // --- Module methods
 // ----------------------------------------------------------------------------
 
-Netatmo.prototype.addDevice = function(prefix,overlay) {
+Netatmo.prototype.addDevice = function(prefix,defaults) {
+
 
     var self = this;
-    var deviceParams = {
-        overlay: overlay,
-        deviceId: "Netatmo_"+prefix+"_" + this.id,
-        moduleId: prefix+"_"+this.id
-    };
-    deviceParams.overlay['deviceType'] = "sensorMultilevel";
     
+    var probeTitle  = defaults.probeTitle || '';
+    var scaleTitle  = defaults.scaleTitle || '';
+    var probeType   = defaults.probeType || prefix;
+    delete defaults.probeType;
+    delete defaults.probeTitle;
+    delete defaults.scaleTitle;
+    
+    var deviceParams = {
+        overlay: { 
+            deviceType: "sensorMultilevel",
+            probeType: probeType,
+            metrics: { 
+                probeTitle: probeTitle,
+                scaleTitle: scaleTitle
+            }
+        },
+        defaults: {
+            metrics: defaults
+        },
+        deviceId: "Netatmo_"+prefix+"_" + this.id,
+        moduleId: prefix+"_"+this.id,
+    };
+
     self.devices[prefix] = self.controller.devices.create(deviceParams);
     return self.devices[prefix];
+    
 };      
      
 Netatmo.prototype.removeDevices = function() {
@@ -329,49 +348,39 @@ Netatmo.prototype.initializeDevices = function(response) {
         var deviceID = response.data.body.devices[dc]._id;
        
         self.addDevice('temperature_'+dc,{
-            metrics : {
-                probeTitle: self.langFile.temperature,
-                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/temperature.png',
-                scaleTitle: this.temperatureUnit,
-                title: deviceName + ' ' + self.langFile.temperature
-            }
+            probeType: 'temperature',
+            scaleTitle: this.temperatureUnit,
+            icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/temperature.png',
+            title: deviceName + ' ' + self.langFile.temperature
         });
-
+    
         self.addDevice('humidity_'+dc,{
-            metrics : {
-                probeTitle: self.langFile.humidity,
-                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/humidity.png',
-                scaleTitle: '%',
-                title: deviceName + ' ' + self.langFile.humidity
-            }
+            probeType: 'humidity',
+            scaleTitle: '%',
+            icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/humidity.png',
+            title: deviceName + ' ' + self.langFile.humidity
         });
 
         self.addDevice('co2_'+dc,{
-            metrics : {
-                probeTitle: self.langFile.co2,
-                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/co2.png',
-                scaleTitle: 'ppm',
-                title: deviceName + ' ' + self.langFile.co2
-            }
-        });
+            probeType: 'co2',
+            scaleTitle: 'ppm',
+            icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/co2.png',
+            title: deviceName + ' ' + self.langFile.co2
+         });
 
         self.addDevice('pressure_'+dc,{
-            metrics : {
-                probeTitle: self.langFile.pressure,
-                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/pressure.png',
-                scaleTitle: 'mbar',
-                title: deviceName + ' ' + self.langFile.pressure
-            }
+            probeType: 'pressure',
+            scaleTitle: 'mbar',
+            icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/pressure.png',
+            title: deviceName + ' ' + self.langFile.pressure
         });
 
         self.addDevice('noise_'+dc,{
-            metrics : {
-                probeTitle: self.langFile.noise,
-                icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/noise.png',
-                scaleTitle: 'db',
-                title: deviceName + ' ' + self.langFile.noise
-            }
-        });
+            probeType: 'noise',
+            scaleTitle: 'db',
+            icon: '/ZAutomation/api/v1/load/modulemedia/Netatmo/noise.png',
+            title: deviceName + ' ' + self.langFile.noise
+       });
            
         var numberOfModules = response.data.body.devices[dc].modules.length;
         
@@ -384,34 +393,27 @@ Netatmo.prototype.initializeDevices = function(response) {
                 var unit = self.getUnit(variable);
                 if (variable == 'Rain') {
                     self.addDevice(variable + '_' + dc + '_' + mc,{
-                        metrics : {
-                            probeTitle: variable,
-                            scaleTitle: unit,
-                            title: moduleName + ' ' + variable + ' ('+self.langFile.current+')'
-                        }
+                        probeType: 'rain',
+                        scaleTitle: unit,
+                        title: moduleName + ' ' + variable + ' ('+self.langFile.current+')'
+                                    
                     });
                     self.addDevice(variable + '1_' + dc + '_' + mc,{
-                        metrics : {
-                            probeTitle: variable,
-                            scaleTitle: unit,
-                            title: moduleName + ' ' + variable + ' ('+self.langFile.last1+')'
-                        }
+                        probeType: 'rain',
+                        scaleTitle: unit,
+                        title: moduleName + ' ' + variable + ' ('+self.langFile.last1+')'
                     });
                     self.addDevice(variable + '24_' + dc + '_' + mc,{
-                        metrics : {
-                            probeTitle: variable,
-                            scaleTitle: unit,
-                            title: moduleName + ' ' + variable + ' ('+self.langFile.last24+')'
-                        }
+                        probeType: 'rain',
+                        scaleTitle: unit,
+                        title: moduleName + ' ' + variable + ' ('+self.langFile.last24+')'
                     });
                 }
                 else {
                     self.addDevice(variable + '_' + dc + '_' + mc,{
-                        metrics : {
-                            probeTitle: variable,
-                            scaleTitle: unit,
-                            title: moduleName + ' ' + variable
-                        }
+                        probeType: variable,
+                        scaleTitle: unit,
+                        title: moduleName + ' ' + variable
                     });
                 }
             }
